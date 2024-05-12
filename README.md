@@ -4,7 +4,7 @@ Fork of https://github.com/SeTSeR/esp-tm1637
 It was too slow for my usecase, so i made it faster.   
 Could have been fast before but i couldnt get it to go below a 30ms cycle....
 
-It was remade with the ETS Delay from esp-idf-hal as delay provider, dunno if it works for non-std projects
+It was remade with the ETS Delay from esp-idf-hal as delay provider in mind, dunno if it works for non-std projects
 
 Average Cycle is at 202us
 
