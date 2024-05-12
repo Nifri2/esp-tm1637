@@ -1,12 +1,18 @@
+//! # TM1637
+//! Use a ETS Delay from the esp-hal
+//! example:
+//! let delay = Ets;
+//! let mut tm1637 = TM1637::new(sda, scl, delay).unwrap();
+
+
 #![no_std]
 #![no_main]
 
-use hal::{
-    blocking::delay::DelayUs,
-    digital::v2::{InputPin, OutputPin},
+use hal::{ // Updated to 1.0.0
+    delay::DelayNs,
+    digital::{InputPin, OutputPin},
 };
 
-use log::debug;
 
 pub const BRIGHTNESS_MAX: u8 = 0x7;
 
@@ -24,10 +30,10 @@ pub struct TM1637<DIO, CLK, DL, E>
 where
     DIO: InputPin<Error = E> + OutputPin<Error = E>,
     CLK: OutputPin<Error = E>,
-    DL: DelayUs<u32>,
+    DL: DelayNs,
 {
     // Time to wait before switching the lock in us.
-    lock_time: u32,
+    lock_time: u32, // Tried using delay_ns but that was a bit too fast for the TM1637
 
     // Pin on which data input resides.
     dio_pin: DIO,
@@ -43,11 +49,11 @@ impl<DIO, CLK, DL, E> TM1637<DIO, CLK, DL, E>
 where
     DIO: InputPin<Error = E> + OutputPin<Error = E>,
     CLK: OutputPin<Error = E>,
-    DL: DelayUs<u32>,
+    DL: DelayNs, // Moved to DelayNs since updating to 1.0.0 removed DelayUs
 {
     pub fn new(dio_pin: DIO, clk_pin: CLK, delay: DL) -> Result<TM1637<DIO, CLK, DL, E>, E> {
         let mut ret = TM1637 {
-            lock_time: 3,
+            lock_time: 100, // 100us is roughly a 254us cycle
             dio_pin,
             clk_pin,
             delay,
@@ -122,7 +128,6 @@ where
     }
 
     fn send_byte(&mut self, mut data: u8) -> Result<(), E> {
-        debug!("Send byte {:#x}", data);
         for _ in 0..8 {
             let data_bit = data & 1;
             if data_bit == 1 {
@@ -149,15 +154,18 @@ where
     }
 
     fn wait_for_ack(&mut self) -> Result<(), E> {
-        for i in 0..255 {
+        for _i in 0..16 { // Cuts the grace period, if its not acking, it prob wont ack
             if self.dio_pin.is_high()? {
                 self.delay.delay_us(self.lock_time);
             } else {
-                debug!("Found on {} tact", i);
+
                 self.delay.delay_us(self.lock_time);
                 self.clk_pin.set_high()?;
                 self.delay.delay_us(self.lock_time);
                 self.clk_pin.set_low()?;
+
+                // log::info!("Got ack");
+                
                 return Ok(());
             }
         }
@@ -208,7 +216,7 @@ impl<DIO, CLK, DL, E> Drop for TM1637<DIO, CLK, DL, E>
 where
     DIO: InputPin<Error = E> + OutputPin<Error = E>,
     CLK: OutputPin<Error = E>,
-    DL: DelayUs<u32>,
+    DL: DelayNs,
 {
     fn drop(&mut self) {
         let _ = self.disable();
