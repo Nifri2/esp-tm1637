@@ -6,6 +6,7 @@ Could have been fast before but i couldnt get it to go below a 30ms cycle....
 
 It was remade with the ETS Delay from esp-idf-hal as delay provider, dunno if it works for non-std projects
 
+Average Cycle is at 202us
 
 # ESP IDF HAL Example
 ```rust
@@ -14,15 +15,15 @@ let pins = peripherals.pins;
 let scl_pin = pins.gpio26;
 let sda_pin = pins.gpio25;
 
-let scl = PinDriver::input_output_od(scl_pin).unwrap();
-let sda = PinDriver::input_output_od(sda_pin).unwrap();
+let scl = PinDriver::input_output_od(scl_pin)?;
+let sda = PinDriver::input_output_od(sda_pin)?;
 
 let delay = Ets;
 
-let mut tm1637 = TM1637::new(sda, scl, delay).unwrap();
+let mut tm1637 = TM1637::new(sda, scl, delay)?;
 
 
-tm1637.send_number(1234, 0x7).unwrap();
+tm1637.send_number(1234, 0x7)?;
 
 ```
 # Platform-agnostic driver for TM1637
